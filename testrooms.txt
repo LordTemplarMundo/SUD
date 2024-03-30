@@ -1,0 +1,16 @@
+symbol: A
+title: The Atrium of Anubis
+desc: A mighty atrium. At its centre is a giant 'A'. All the walls are made of aluminium.
+---
+symbol: B
+title: The Boardroom of Baldur
+desc: An imposing boardroom. At its centre is a giant 'B'. All the walls are made
+  from balsawood.
+---
+symbol: C
+title: The Cattery
+desc: A comfortable catter. It is filled with a variety of cats. They are very noisy.
+---
+symbol: D
+title: The Dungeon
+desc: This is a dingy dungeon. It is built from stern grey stone. It smells unpleasant.

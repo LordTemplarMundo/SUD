@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sync"
+
+	"gopkg.in/yaml.v2"
 )
 
 // The text-based representation of a map ingested from a file.
@@ -117,9 +118,9 @@ func isRoom(symbol string) bool {
 	return !isEmpty(symbol) && !isExit(symbol)
 }
 
-func (tm *TextMap) buildRooms() []*Room {
+func (tm *TextMap) buildRooms(rooms map[string]TextRoom) []*Room {
 	tm.printArea()
-	mapWorker := CreateMapWorker(tm)
+	mapWorker := CreateMapWorker(tm, rooms)
 	for i, symbol := range tm.area {
 		if isRoom(symbol) {
 			mapWorker.buildRoom(i)
@@ -157,10 +158,10 @@ func getEdgeFlags(tm *TextMap, index int, coords Coordinates) (dirFlags Directio
 
 type MapWorker struct {
 	workerCount    int
-	waitGroup      *sync.WaitGroup
 	textMap        *TextMap
 	completedRooms map[int]*Room
 	links          []Link
+	rooms          map[string]TextRoom
 }
 
 type Link struct {
@@ -169,12 +170,13 @@ type Link struct {
 	direction Direction
 }
 
-func CreateMapWorker(tm *TextMap) (mw *MapWorker) {
+func CreateMapWorker(tm *TextMap, rooms map[string]TextRoom) (mw *MapWorker) {
 	mw = &MapWorker{
 		workerCount:    0,
 		textMap:        tm,
 		links:          []Link{},
 		completedRooms: make(map[int]*Room),
+		rooms:          rooms,
 	}
 	return mw
 }
@@ -190,8 +192,12 @@ func (mw *MapWorker) joinLinks() {
 }
 
 func (mw *MapWorker) buildRoom(index int) {
-	output := newGenericRoom()
-	output.name = mw.textMap.area[index]
+	var output *Room
+	if room, exists := mw.rooms[mw.textMap.area[index]]; exists {
+		output = newUnlinkedRoom(room.Description, room.Title)
+	} else {
+		output = newGenericRoom()
+	}
 	mw.completedRooms[index] = output
 }
 
@@ -214,6 +220,25 @@ func (mw *MapWorker) buildExit(index int) {
 func (mw *MapWorker) getRooms() (output []*Room) {
 	for _, room := range mw.completedRooms {
 		output = append(output, room)
+	}
+	return
+}
+
+type TextRoom struct {
+	Symbol      string `yaml:"symbol"`
+	Title       string `yaml:"title"`
+	Description string `yaml:"desc"`
+}
+
+func readRooms(dir string) (rooms map[string]TextRoom) {
+	rooms = make(map[string]TextRoom)
+	if rawRooms, err := os.Open(dir); err == nil {
+		defer rawRooms.Close()
+		decoder := yaml.NewDecoder(rawRooms)
+		var rawRoom TextRoom
+		for decoder.Decode(&rawRoom) == nil {
+			rooms[rawRoom.Symbol] = rawRoom
+		}
 	}
 	return
 }

@@ -1,7 +1,3 @@
-A I-J-K
-|     |
-B-C G H-L
-  | | | |
-  D-E-F M-P
-        |
-      O-N
+A-B
+|
+C-D 
