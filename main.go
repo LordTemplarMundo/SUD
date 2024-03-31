@@ -8,7 +8,7 @@ func main() {
 	fmt.Println("Welcome to the cool game.")
 	area, _ := readMap("./testmap.txt")
 	rooms := readRooms("./testrooms.txt")
-	world := newWorld(area.buildRooms(rooms))
+	world := newWorld(area.buildMap(rooms))
 	player := newPlayer("Mysterious Stranger", world)
 	world.startWorld()
 	var input string

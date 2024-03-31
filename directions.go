@@ -13,9 +13,10 @@ const (
 	East    Direction = 2  //0000 0010
 	South   Direction = 4  //0000 0100
 	West    Direction = 8  //0000 1000
-	DirMask Direction = 15 //0000 1111
+	DirMask Direction = 15 //0000 1111 For masking cardinal directions.
 )
 
+// Converts a Direction into a human-readable string.
 func dirToString(dir Direction) string {
 	switch dir {
 	case North:
@@ -30,11 +31,14 @@ func dirToString(dir Direction) string {
 	return "NaD"
 }
 
+// Helper function that produces an array of the Direction string and the
+// first character of that string. E.g. North => []string{"North","N"}
 func dirToCommandStrings(dir Direction) []string {
 	full := dirToString(dir)
 	return []string{full, string(full[0])}
 }
 
+// Invert cardinal Direction 'dir'. E.g. North => South
 func invertDir(dir Direction) Direction {
 	switch dir {
 	case North:
@@ -89,6 +93,8 @@ func flagToIndicies(tm *TextMap, index int, dirFlag Direction) map[Direction]int
 	return output
 }
 
+// Returns the index in a TextMap, tm that is Direction, dir, from a starting
+// point, index.
 func flagToIndex(tm *TextMap, index int, dir Direction) (int, error) {
 	if output, ok := flagToIndicies(tm, index, dir)[dir]; ok {
 		return output, nil
