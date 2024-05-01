@@ -5,12 +5,14 @@ import (
 )
 
 type Mob struct {
-	location *Room
-	name     string
-	commands []Command
-	world    *World
-	pulse    <-chan interface{}
-	cmdQueue []func(*Mob) bool
+	location    *Room
+	name        string
+	commands    []Command
+	world       *World
+	pulse       <-chan interface{}
+	cmdQueue    []func(*Mob) bool
+	print       chan<- string
+	description string
 }
 
 type Pulsable interface {
@@ -21,27 +23,42 @@ func (m *Mob) Register(pulse <-chan interface{}) {
 	m.pulse = pulse
 }
 
-func newMob(name string, world *World) (p *Mob) {
-	start := world.getStartRoom()
-	p = &Mob{
-		name:     name,
-		location: start,
-		commands: basicCommands(),
-		world:    world,
+func newMob() (p *Mob) {
+	return &Mob{
+		name:        "",
+		commands:    basicCommands(),
+		description: "A generic looking person.",
 	}
-	pulse, err := world.registerThing(p)
+}
+
+func (m *Mob) spawn(name string, world *World) error {
+	m.name = name
+	start := world.getStartRoom()
+	pulse, err := world.registerThing(m)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to create mob: %s", name)
-		return p
+		return err
 	}
-	p.pulse = pulse
-	start.enterRoom(p)
+	m.pulse = pulse
+	go m.beat()
+	start.enterRoom(m)
 	log.WithFields(log.Fields{
-		"mob_name":      name,
-		"starting_room": start.name,
-	}).Info("Mob instanced.")
-	go p.beat()
-	return p
+		"mob_name":      m.name,
+		"starting_room": m.location.name,
+	}).Info("Mob spawned.")
+	return nil
+}
+
+func (m *Mob) connect(print chan<- string) {
+	m.print = print
+}
+
+func (m *Mob) getDescription() string {
+	return m.description
+}
+
+func (m *Mob) getName() string {
+	return m.name
 }
 
 func (m *Mob) beat() {

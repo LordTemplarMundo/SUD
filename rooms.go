@@ -3,18 +3,21 @@ package main
 import (
 	"fmt"
 	"strings"
+	"sync"
 )
 
 type Room struct {
+	sync.RWMutex
 	description string
 	name        string
 	exits       []*Exit
 	commands    []Command
+	contents    []Thing
 }
 
-func (r *Room) show() {
+func (r *Room) show() string {
 	padding := strings.Repeat("-", len(r.description))
-	fmt.Printf("\n|%v|\n%v\n%v\n%v\n\n", r.name, padding, r.description, padding)
+	return fmt.Sprintf("\n|%v|\n%v\n%v\n%v\n\n", r.name, padding, r.description, padding)
 }
 
 func (r *Room) getExitCommands() (commands []Command) {
@@ -25,18 +28,19 @@ func (r *Room) getExitCommands() (commands []Command) {
 	return
 }
 
-func (r *Room) listExits() {
+func (r *Room) listExits() string {
 	var exitString string
 	for _, exit := range r.exits {
 		exitString += exit.getPrimaryName() + ", "
 	}
 	if len(r.exits) > 0 {
-		fmt.Printf("Visible Exits: %v\n", exitString)
+		return fmt.Sprintf("Visible Exits: %v\n", exitString)
 	}
+	return "You can't see any exits."
 }
 
 func newUnlinkedRoom(description string, name string) *Room {
-	return &Room{description, name, []*Exit{}, []Command{}}
+	return &Room{sync.RWMutex{}, description, name, []*Exit{}, []Command{}, []Thing{}}
 }
 
 func newGenericRoom() *Room {
@@ -56,8 +60,22 @@ func (r *Room) updateCommands() {
 
 func (r *Room) enterRoom(p *Mob) bool {
 	p.location = r
-	r.show()
-	r.listExits()
+	p.print <- fmt.Sprintf("%v\n%v\n", r.show(), r.listExits())
+	r.RWMutex.Lock()
+	r.contents = append(r.contents, p)
+	r.RWMutex.Unlock()
 	// Later on, if something stops the movement, return false.
+	return true
+}
+
+func (r *Room) leaveRoom(p *Mob) bool {
+
+	for pos, thing := range r.contents {
+		if thing.getName() == p.getName() {
+			r.RWMutex.Lock()
+			r.contents = append(r.contents[0:pos], r.contents[pos:len(r.contents)-1]...)
+			r.RWMutex.Unlock()
+		}
+	}
 	return true
 }

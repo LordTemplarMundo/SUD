@@ -16,7 +16,7 @@ func lookCommand() Command {
 	return Command{
 		names: []string{"look", "l"},
 		action: func(p *Mob) bool {
-			p.location.show()
+			p.print <- p.location.show()
 			return true
 		},
 	}
@@ -26,7 +26,7 @@ func exitCommand() Command {
 	return Command{
 		names: []string{"exits", "doors", "dirs"},
 		action: func(p *Mob) bool {
-			p.location.listExits()
+			p.print <- p.location.listExits()
 			return true
 		},
 	}
@@ -44,16 +44,17 @@ func quitCommand() Command {
 }
 
 func noCommandAction(p *Mob) bool {
-	fmt.Println("I don't know how to do that!")
+	p.print <- "I don't know how to do that!"
 	return true
 }
 
-func generateExitAction(room *Room) Cmd {
-	return func(p *Mob) bool {
-		roomEntered := room.enterRoom(p)
+func generateExitAction(exit *Exit) Cmd {
+	return func(m *Mob) bool {
+		roomEntered := exit.destination.room.enterRoom(m)
 		if !roomEntered {
-			fmt.Println("You can't go that way!")
+			m.print <- "You can't go that way!"
 		}
+		exit.room.leaveRoom(m)
 		return roomEntered
 	}
 }

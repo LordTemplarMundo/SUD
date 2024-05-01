@@ -33,6 +33,6 @@ func (e *Exit) getPrimaryName() string {
 func (e *Exit) generateCommands() Command {
 	return Command{
 		names:  e.names,
-		action: generateExitAction(e.destination.room),
+		action: generateExitAction(e),
 	}
 }
