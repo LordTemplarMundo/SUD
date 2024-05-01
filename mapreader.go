@@ -5,8 +5,31 @@ import (
 	"io"
 	"os"
 
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
+
+func CreateMap(dir string) []*Room {
+	log.WithFields(log.Fields{
+		"map_dir": fmt.Sprintf("./%s/", dir),
+	}).Info("Loading map.")
+	area, err := readMap(fmt.Sprintf("./%s/map.txt", dir))
+	if err != nil {
+		log.WithError(err).Fatal("Could not load map.")
+	}
+	rooms, err := readRooms(fmt.Sprintf("./%s/rooms.txt", dir))
+	if err != nil {
+		log.WithError(err).Fatal("Could not load rooms.")
+	}
+	output := area.buildMap(rooms)
+	log.WithFields(log.Fields{
+		"map_dir":    fmt.Sprintf("./%s/", dir),
+		"map_width":  area.width,
+		"map_height": area.height,
+		"no_rooms":   len(output),
+	}).Info("Map loaded.")
+	return output
+}
 
 // The text-based representation of a map ingested from a file.
 type TextMap struct {
@@ -248,7 +271,7 @@ type TextRoom struct {
 
 // This collects a set of serialised room descriptions and symbols from a file
 // at location 'dir' and creates a map of symbol to TextRoom.
-func readRooms(dir string) (rooms map[string]TextRoom) {
+func readRooms(dir string) (rooms map[string]TextRoom, err error) {
 	rooms = make(map[string]TextRoom)
 	if rawRooms, err := os.Open(dir); err == nil {
 		defer rawRooms.Close()
@@ -258,5 +281,5 @@ func readRooms(dir string) (rooms map[string]TextRoom) {
 			rooms[rawRoom.Symbol] = rawRoom
 		}
 	}
-	return
+	return rooms, err
 }

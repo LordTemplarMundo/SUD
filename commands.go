@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-type Cmd = func(*Player) bool
+type Cmd = func(*Mob) bool
 
 type Command struct {
 	names  []string
@@ -15,7 +15,7 @@ type Command struct {
 func lookCommand() Command {
 	return Command{
 		names: []string{"look", "l"},
-		action: func(p *Player) bool {
+		action: func(p *Mob) bool {
 			p.location.show()
 			return true
 		},
@@ -25,7 +25,7 @@ func lookCommand() Command {
 func exitCommand() Command {
 	return Command{
 		names: []string{"exits", "doors", "dirs"},
-		action: func(p *Player) bool {
+		action: func(p *Mob) bool {
 			p.location.listExits()
 			return true
 		},
@@ -35,7 +35,7 @@ func exitCommand() Command {
 func quitCommand() Command {
 	return Command{
 		names: []string{"quit", "q"},
-		action: func(p *Player) bool {
+		action: func(p *Mob) bool {
 			fmt.Println("Goodbye!")
 			p.world.stopWorld()
 			return true
@@ -43,13 +43,13 @@ func quitCommand() Command {
 	}
 }
 
-func noCommandAction(p *Player) bool {
+func noCommandAction(p *Mob) bool {
 	fmt.Println("I don't know how to do that!")
 	return true
 }
 
 func generateExitAction(room *Room) Cmd {
-	return func(p *Player) bool {
+	return func(p *Mob) bool {
 		roomEntered := room.enterRoom(p)
 		if !roomEntered {
 			fmt.Println("You can't go that way!")

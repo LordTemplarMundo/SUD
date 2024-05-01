@@ -54,7 +54,7 @@ func (r *Room) updateCommands() {
 	r.commands = r.getExitCommands()
 }
 
-func (r *Room) enterRoom(p *Player) bool {
+func (r *Room) enterRoom(p *Mob) bool {
 	p.location = r
 	r.show()
 	r.listExits()
