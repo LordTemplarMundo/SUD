@@ -53,6 +53,20 @@ func invertDir(dir Direction) Direction {
 	return BadDir
 }
 
+func invertDirString(dirString string) string {
+	switch dirString {
+	case "North":
+		return "South"
+	case "South":
+		return "North"
+	case "East":
+		return "West"
+	case "West":
+		return "East"
+	}
+	return "Unknown"
+}
+
 // Get the cardinal direction to i2 from i1
 func cardinalDirBetween(i1, i2, width int) Direction {
 	if (i1-i2)%width == 0 {

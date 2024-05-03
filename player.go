@@ -42,11 +42,17 @@ func (m *Mob) spawn(name string, world *World) error {
 	m.pulse = pulse
 	go m.beat()
 	start.enterRoom(m)
+	m.print <- start.displayRoom()
 	log.WithFields(log.Fields{
 		"mob_name":      m.name,
 		"starting_room": m.location.name,
 	}).Info("Mob spawned.")
 	return nil
+}
+
+func (m *Mob) despawn() {
+	world.roomEmit(m.name+" departs from the game.\n", m.location)
+	m.location.leaveRoom(m)
 }
 
 func (m *Mob) connect(print chan<- string) {

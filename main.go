@@ -5,6 +5,8 @@ import (
 	"net"
 	"strings"
 	"sync"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // func main() {
@@ -38,7 +40,7 @@ var (
 
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
-	fmt.Println("New connection established:", conn.RemoteAddr())
+	log.Info("New connection established from ", conn.RemoteAddr())
 
 	// Create a new user and add it to the list
 	user := &User{Conn: conn, Mob: newMob()}
@@ -58,6 +60,7 @@ func handleConnection(conn net.Conn) {
 		bytesRead, err := conn.Read(buffer)
 		if err != nil {
 			fmt.Println("Error reading from connection:", err)
+			log.WithError(err).Warn("Error reading from connection.")
 			// Remove the user from the list if an error occurs
 			removeUser(user)
 			return
@@ -95,6 +98,24 @@ func addUser(user *User) {
 	users = append(users, user)
 }
 
+func getUserFromMob(m *Mob) (*User, error) {
+	for _, u := range users {
+		if u.Mob == m {
+			return u, nil
+		}
+	}
+	return nil, fmt.Errorf("Could not find user with mob '%v' in connection pool.", m)
+}
+
+func disconnectUserFromMob(m *Mob) {
+	if user, err := getUserFromMob(m); err == nil {
+		removeUser(user)
+		user.Conn.Close()
+	} else {
+		log.WithError(err).Errorf("Could not find mob '%v'.", m)
+	}
+}
+
 func removeUser(user *User) {
 	usersLock.Lock()
 	defer usersLock.Unlock()
@@ -111,11 +132,13 @@ func removeUser(user *User) {
 func processCommand(user *User, command string) {
 	// Here you can implement logic to parse and handle the received command
 
-	fmt.Println("Received command from", user.Conn.RemoteAddr(), ":", command)
+	log.WithFields(log.Fields{
+		"mob_name":       user.Mob.name,
+		"location":       user.Mob.location.name,
+		"command":        command,
+		"remote_address": user.Conn.RemoteAddr(),
+	}).Info("Command received")
 
-	// for _, usr := range users {
-	// 	usr.Conn.Write([]byte(fmt.Sprintf("%v says: %v", user.Conn.RemoteAddr(), command)))
-	// }
 	availableActions := append(user.Mob.commands, user.Mob.location.getExitCommands()...)
 	action := parseInput(command, availableActions)
 	user.Mob.cmdQueue = append(user.Mob.cmdQueue, action)
@@ -127,19 +150,20 @@ func main() {
 	rooms := CreateMap("testmap")
 	world = newWorld(rooms)
 	world.startWorld()
+	defer world.stopWorld()
 
 	listener, err := net.Listen("tcp", port)
 	if err != nil {
-		fmt.Println("Error:", err)
+		log.WithError(err).Fatal("Error listening on port", port)
 		return
 	}
 	defer listener.Close()
-	fmt.Println("Server is listening on port", port)
+	log.Infof("Server is listening on port %v", port)
 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Println("Error accepting connection:", err)
+			log.WithError(err).Fatal("Error accepting connection.")
 			continue
 		}
 		go handleConnection(conn)

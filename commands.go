@@ -16,7 +16,7 @@ func lookCommand() Command {
 	return Command{
 		names: []string{"look", "l"},
 		action: func(p *Mob) bool {
-			p.print <- p.location.show()
+			p.print <- p.location.displayRoom()
 			return true
 		},
 	}
@@ -36,31 +36,47 @@ func quitCommand() Command {
 	return Command{
 		names: []string{"quit", "q"},
 		action: func(p *Mob) bool {
-			fmt.Println("Goodbye!")
-			p.world.stopWorld()
+			p.despawn()
+			disconnectUserFromMob(p)
+			return true
+		},
+	}
+}
+
+func sayCommand() Command {
+	return Command{
+		names: []string{"say", "'"},
+		action: func(p *Mob) bool {
+			world.roomEmit(fmt.Sprintf("%v makes a noise!\n", p.getName()), p.location)
 			return true
 		},
 	}
 }
 
 func noCommandAction(p *Mob) bool {
-	p.print <- "I don't know how to do that!"
+	p.print <- "I don't know how to do that!\n"
 	return true
 }
 
 func generateExitAction(exit *Exit) Cmd {
 	return func(m *Mob) bool {
+		roomLeft := exit.room.leaveRoom(m)
+		if !roomLeft {
+			m.print <- "You can't get out of here!"
+		}
+		world.roomEmit(fmt.Sprintf("%v leaves to the %v.\n", m.name, exit.getPrimaryName()), exit.room)
 		roomEntered := exit.destination.room.enterRoom(m)
 		if !roomEntered {
-			m.print <- "You can't go that way!"
+			m.print <- "You can't get in there!"
 		}
-		exit.room.leaveRoom(m)
+		world.roomEmit(fmt.Sprintf("%v enters from the %v.\n", m.name, exit.destination.getPrimaryName()), exit.destination.room)
+		m.print <- exit.destination.room.displayRoom()
 		return roomEntered
 	}
 }
 
 func basicCommands() (output []Command) {
-	output = append(output, []Command{lookCommand(), exitCommand(), quitCommand()}...)
+	output = append(output, []Command{lookCommand(), exitCommand(), quitCommand(), sayCommand()}...)
 	return
 }
 

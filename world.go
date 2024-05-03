@@ -69,11 +69,19 @@ func makeTestDungeon() []*Room {
 
 func (w *World) beat() {
 	for {
-		time.Sleep(time.Second)
+		time.Sleep(time.Millisecond)
 		w.Mutex.Lock()
 		for _, thing := range w.things {
 			thing <- true
 		}
 		w.Mutex.Unlock()
+	}
+}
+
+func (w *World) roomEmit(sound string, location *Room) {
+	for _, user := range users {
+		if user.Mob.location.name == location.name {
+			user.Mob.print <- sound
+		}
 	}
 }
