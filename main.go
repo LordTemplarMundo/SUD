@@ -9,22 +9,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// func main() {
-// 	fmt.Println("Welcome to the cool game.")
-// 	rooms := CreateMap("testmap")
-// 	world := newWorld(rooms)
-// 	world.startWorld()
-// 	player := newMob("Mysterious Stranger", world)
-// 	var input string
-// 	for world.running {
-// 		fmt.Print(">")
-// 		fmt.Scan(&input)
-// 		availableActions := append(player.commands, player.location.getExitCommands()...)
-// 		action := parseInput(input, availableActions)
-// 		player.cmdQueue = append(player.cmdQueue, action)
-// 	}
-// }
-
 // User represents a connected user
 type User struct {
 	Conn net.Conn
@@ -44,7 +28,6 @@ func handleConnection(conn net.Conn) {
 
 	// Create a new user and add it to the list
 	user := &User{Conn: conn, Mob: newMob()}
-	addUser(user)
 	fmt.Println(user.Mob.name)
 	// Send a welcome message to the user
 	welcomeMessage := "Welcome to the Telnet Game!\nPlease select a name: \n"
@@ -83,6 +66,7 @@ func handleConnection(conn net.Conn) {
 				}
 			}()
 			user.Mob.spawn(command, world)
+			addUser(user)
 			continue
 		}
 
@@ -139,9 +123,10 @@ func processCommand(user *User, command string) {
 		"remote_address": user.Conn.RemoteAddr(),
 	}).Info("Command received")
 
+	firstPart, otherParts, _ := strings.Cut(command, " ")
 	availableActions := append(user.Mob.commands, user.Mob.location.getExitCommands()...)
-	action := parseInput(command, availableActions)
-	user.Mob.cmdQueue = append(user.Mob.cmdQueue, action)
+	action := readyCommand(firstPart, availableActions)
+	user.Mob.cmdQueue = append(user.Mob.cmdQueue, action(user.Mob, otherParts))
 }
 
 func main() {

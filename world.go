@@ -20,13 +20,6 @@ func newWorld(rooms []*Room) *World {
 	}
 }
 
-func newTestWorld() *World {
-	return &World{
-		rooms:   makeTestDungeon(),
-		running: false,
-	}
-}
-
 func (w *World) getStartRoom() *Room {
 	return w.rooms[0]
 }
@@ -58,15 +51,6 @@ func (w *World) stopWorld() {
 	w.Mutex.Unlock()
 }
 
-func makeTestDungeon() []*Room {
-	sideRoom := newUnlinkedRoom("This room is unimportant. Go away.", "Side Room")
-	endRoom := newUnlinkedRoom("This room is marginally better. Maybe.", "End Room")
-	startRoom := newUnlinkedRoom("This room sucks. Really bad. Wow!", "Start Room")
-	connectRooms(startRoom, endRoom, []string{"north", "n"}, []string{"south", "s"})
-	connectRooms(startRoom, sideRoom, []string{"west", "w"}, []string{"east", "e"})
-	return []*Room{startRoom, endRoom, sideRoom}
-}
-
 func (w *World) beat() {
 	for {
 		time.Sleep(time.Millisecond)
@@ -79,9 +63,11 @@ func (w *World) beat() {
 }
 
 func (w *World) roomEmit(sound string, location *Room) {
+	usersLock.Lock()
 	for _, user := range users {
 		if user.Mob.location.name == location.name {
 			user.Mob.print <- sound
 		}
 	}
+	usersLock.Unlock()
 }

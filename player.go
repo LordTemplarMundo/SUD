@@ -10,7 +10,7 @@ type Mob struct {
 	commands    []Command
 	world       *World
 	pulse       <-chan interface{}
-	cmdQueue    []func(*Mob) bool
+	cmdQueue    []func() bool
 	print       chan<- string
 	description string
 }
@@ -72,13 +72,13 @@ func (m *Mob) beat() {
 		select {
 		case _ = <-m.pulse:
 			if len(m.cmdQueue) >= 1 {
-				var nextCommand Cmd
+				var nextCommand ReadiedCommand
 				if len(m.cmdQueue) >= 2 {
 					nextCommand, m.cmdQueue = m.cmdQueue[0], m.cmdQueue[1:]
 				} else {
-					nextCommand, m.cmdQueue = m.cmdQueue[0], []Cmd{}
+					nextCommand, m.cmdQueue = m.cmdQueue[0], []ReadiedCommand{}
 				}
-				nextCommand(m)
+				nextCommand()
 			}
 		}
 	}

@@ -5,19 +5,23 @@ import (
 	"strings"
 )
 
-type Cmd = func(*Mob) bool
+type Cmd = func(*Mob, string) ReadiedCommand
 
 type Command struct {
 	names  []string
 	action Cmd
 }
 
+type ReadiedCommand = func() bool
+
 func lookCommand() Command {
 	return Command{
 		names: []string{"look", "l"},
-		action: func(p *Mob) bool {
-			p.print <- p.location.displayRoom()
-			return true
+		action: func(p *Mob, _ string) ReadiedCommand {
+			return func() bool {
+				p.print <- p.location.displayRoom()
+				return true
+			}
 		},
 	}
 }
@@ -25,9 +29,11 @@ func lookCommand() Command {
 func exitCommand() Command {
 	return Command{
 		names: []string{"exits", "doors", "dirs"},
-		action: func(p *Mob) bool {
-			p.print <- p.location.listExits()
-			return true
+		action: func(p *Mob, _ string) ReadiedCommand {
+			return func() bool {
+				p.print <- p.location.listExits()
+				return true
+			}
 		},
 	}
 }
@@ -35,10 +41,12 @@ func exitCommand() Command {
 func quitCommand() Command {
 	return Command{
 		names: []string{"quit", "q"},
-		action: func(p *Mob) bool {
-			p.despawn()
-			disconnectUserFromMob(p)
-			return true
+		action: func(p *Mob, _ string) ReadiedCommand {
+			return func() bool {
+				p.despawn()
+				disconnectUserFromMob(p)
+				return true
+			}
 		},
 	}
 }
@@ -46,32 +54,38 @@ func quitCommand() Command {
 func sayCommand() Command {
 	return Command{
 		names: []string{"say", "'"},
-		action: func(p *Mob) bool {
-			world.roomEmit(fmt.Sprintf("%v makes a noise!\n", p.getName()), p.location)
-			return true
+		action: func(p *Mob, text string) ReadiedCommand {
+			return func() bool {
+				world.roomEmit(fmt.Sprintf("%v says: %v\n", p.getName(), text), p.location)
+				return true
+			}
 		},
 	}
 }
 
-func noCommandAction(p *Mob) bool {
-	p.print <- "I don't know how to do that!\n"
-	return true
+func noCommandAction(p *Mob, _ string) ReadiedCommand {
+	return func() bool {
+		p.print <- "I don't know how to do that!\n"
+		return true
+	}
 }
 
 func generateExitAction(exit *Exit) Cmd {
-	return func(m *Mob) bool {
-		roomLeft := exit.room.leaveRoom(m)
-		if !roomLeft {
-			m.print <- "You can't get out of here!"
+	return func(m *Mob, _ string) ReadiedCommand {
+		return func() bool {
+			roomLeft := exit.room.leaveRoom(m)
+			if !roomLeft {
+				m.print <- "You can't get out of here!"
+			}
+			world.roomEmit(fmt.Sprintf("%v leaves to the %v.\n", m.name, exit.getPrimaryName()), exit.room)
+			roomEntered := exit.destination.room.enterRoom(m)
+			if !roomEntered {
+				m.print <- "You can't get in there!"
+			}
+			world.roomEmit(fmt.Sprintf("%v enters from the %v.\n", m.name, exit.destination.getPrimaryName()), exit.destination.room)
+			m.print <- exit.destination.room.displayRoom()
+			return roomEntered
 		}
-		world.roomEmit(fmt.Sprintf("%v leaves to the %v.\n", m.name, exit.getPrimaryName()), exit.room)
-		roomEntered := exit.destination.room.enterRoom(m)
-		if !roomEntered {
-			m.print <- "You can't get in there!"
-		}
-		world.roomEmit(fmt.Sprintf("%v enters from the %v.\n", m.name, exit.destination.getPrimaryName()), exit.destination.room)
-		m.print <- exit.destination.room.displayRoom()
-		return roomEntered
 	}
 }
 
@@ -80,10 +94,10 @@ func basicCommands() (output []Command) {
 	return
 }
 
-func parseInput(input string, commands []Command) Cmd {
+func readyCommand(firstPart string, commands []Command) Cmd {
 	for _, cmd := range commands {
 		for _, alias := range cmd.names {
-			if strings.ToLower(alias) == strings.ToLower(input) {
+			if strings.ToLower(alias) == strings.ToLower(firstPart) {
 				return cmd.action
 			}
 		}
